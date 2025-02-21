@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText
+        android:id="@+id/editTextMasseCorporelle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Entrez votre masse corporelle" />
+
+    <Button
+        android:id="@+id/buttonSaveMasseCorporelle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enregistrer" />
+
+    <Button
+        android:id="@+id/buttonExportMasseCorporelle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Exporter en CSV" />
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/lineChartMasseCorporelle"
+        android:layout_width="match_parent"
+        android:layout_height="300dp" />
+</LinearLayout>
