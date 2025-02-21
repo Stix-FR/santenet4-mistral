@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">HealthTracker</string>
+    <string name="notification_channel_name">HealthTrackerChannel</string>
+    <string name="notification_channel_description">Channel for Health Tracker notifications</string>
+</resources>
