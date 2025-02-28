@@ -1,3 +1,4 @@
+
 package com.example.healthtracker;
 
 import androidx.room.Entity;
@@ -8,6 +9,7 @@ public class SouffleEntity {
     @PrimaryKey(autoGenerate = true)
     private int id;
     private String value;
+    private long timestamp;
 
     public int getId() {
         return id;
@@ -23,5 +25,13 @@ public class SouffleEntity {
 
     public void setValue(String value) {
         this.value = value;
+    }
+    
+    public long getTimestamp() {
+        return timestamp;
+    }
+    
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 }

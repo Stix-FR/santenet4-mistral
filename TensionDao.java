@@ -1,3 +1,4 @@
+
 package com.example.healthtracker;
 
 import androidx.room.Dao;
@@ -10,6 +11,6 @@ public interface TensionDao {
     @Insert
     void insert(TensionEntity tension);
 
-    @Query("SELECT * FROM tension")
+    @Query("SELECT * FROM tension ORDER BY timestamp DESC")
     List<TensionEntity> getAll();
 }
