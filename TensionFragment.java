@@ -16,89 +16,84 @@ import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class TensionFragment extends Fragment {
     private EditText editTextTension;
-    private Button buttonSaveTension;
-    private Button buttonExportTension;
-    private LineChart lineChartTension;
+    private Button buttonSave;
+    private LineChart chartTension;
     private HealthDatabase db;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_tension, container, false);
+        
+        // Initialiser la base de données
+        db = Room.databaseBuilder(getContext(), HealthDatabase.class, "health-database")
+                .allowMainThreadQueries() // Pour la démo seulement
+                .build();
 
+        // Initialiser les vues
         editTextTension = view.findViewById(R.id.editTextTension);
-        buttonSaveTension = view.findViewById(R.id.buttonSaveTension);
-        buttonExportTension = view.findViewById(R.id.buttonExportTension);
-        lineChartTension = view.findViewById(R.id.lineChartTension);
-
-        db = Room.databaseBuilder(getContext(), HealthDatabase.class, "health-db").build();
-
-        buttonSaveTension.setOnClickListener(v -> {
-            String tensionValue = editTextTension.getText().toString();
-            if (tensionValue.isEmpty()) {
-                Toast.makeText(getContext(), "Veuillez entrer une valeur", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            
-            new Thread(() -> {
-                TensionEntity tension = new TensionEntity();
-                tension.setValue(tensionValue);
-                tension.setTimestamp(System.currentTimeMillis());
-                db.tensionDao().insert(tension);
-                
-                getActivity().runOnUiThread(() -> {
-                    Toast.makeText(getContext(), "Données enregistrées avec succès", Toast.LENGTH_SHORT).show();
-                    editTextTension.setText("");
-                    loadChartData();
-                });
-            }).start();
-        });
-
-        buttonExportTension.setOnClickListener(v -> {
-            new Thread(() -> {
-                List<TensionEntity> tensionList = db.tensionDao().getAll();
-                Utils.exportDataToCSV(getContext(), tensionList, "tension_data.csv");
-                
-                getActivity().runOnUiThread(() -> {
-                    Toast.makeText(getContext(), "Données exportées avec succès", Toast.LENGTH_SHORT).show();
-                });
-            }).start();
-        });
-
-        loadChartData();
+        buttonSave = view.findViewById(R.id.buttonSaveTension);
+        chartTension = view.findViewById(R.id.chartTension);
+        
+        // Configurer le clic sur le bouton
+        buttonSave.setOnClickListener(v -> saveTension());
+        
+        // Charger les données
+        loadTensionData();
+        
         return view;
     }
 
-    private void loadChartData() {
-        new Thread(() -> {
-            List<TensionEntity> tensionList = db.tensionDao().getAll();
-            List<Entry> entries = new ArrayList<>();
+    private void saveTension() {
+        String tensionValue = editTextTension.getText().toString();
+        if (!tensionValue.isEmpty()) {
+            // Créer et enregistrer dans la base de données
+            TensionEntity tension = new TensionEntity();
+            tension.setValue(tensionValue);
+            tension.setTimestamp(new Date().getTime());
             
-            for (int i = 0; i < tensionList.size(); i++) {
-                entries.add(new Entry(i, Float.parseFloat(tensionList.get(i).getValue())));
-            }
+            db.tensionDao().insert(tension);
+            
+            // Rafraîchir le graphique
+            loadTensionData();
+            
+            // Réinitialiser le champ
+            editTextTension.setText("");
+            
+            Toast.makeText(getContext(), "Tension enregistrée", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(getContext(), "Veuillez entrer une valeur", Toast.LENGTH_SHORT).show();
+        }
+    }
 
-            getActivity().runOnUiThread(() -> {
-                if (entries.isEmpty()) {
-                    lineChartTension.clear();
-                    lineChartTension.invalidate();
-                    return;
-                }
-
-                LineDataSet dataSet = new LineDataSet(entries, "Tension");
-                dataSet.setColor(Color.BLUE);
-                dataSet.setValueTextColor(Color.BLACK);
-                dataSet.setCircleColor(Color.BLUE);
-                dataSet.setCircleRadius(4f);
-
-                LineData lineData = new LineData(dataSet);
-                lineChartTension.setData(lineData);
-                lineChartTension.getDescription().setEnabled(false);
-                lineChartTension.invalidate();
-            });
-        }).start();
+    private void loadTensionData() {
+        List<TensionEntity> tensions = db.tensionDao().getAll();
+        
+        ArrayList<Entry> entries = new ArrayList<>();
+        
+        for (int i = 0; i < tensions.size(); i++) {
+            TensionEntity tension = tensions.get(i);
+            entries.add(new Entry(i, Float.parseFloat(tension.getValue())));
+        }
+        
+        if (entries.isEmpty()) {
+            // Si pas de données, masquer le graphique
+            chartTension.setVisibility(View.GONE);
+            return;
+        }
+        
+        chartTension.setVisibility(View.VISIBLE);
+        
+        LineDataSet dataSet = new LineDataSet(entries, "Tension");
+        dataSet.setColor(Color.RED);
+        dataSet.setValueTextColor(Color.BLACK);
+        
+        LineData lineData = new LineData(dataSet);
+        chartTension.setData(lineData);
+        chartTension.invalidate(); // Rafraîchir
     }
 }

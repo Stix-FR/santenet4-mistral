@@ -16,84 +16,96 @@ import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class MasseCorporelleFragment extends Fragment {
     private EditText editTextPoids;
     private EditText editTextTaille;
-    private Button buttonSaveIMC;
-    private LineChart lineChartIMC;
+    private Button buttonSave;
+    private LineChart chartIMC;
     private HealthDatabase db;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_masse_corporelle, container, false);
+        
+        // Initialiser la base de données
+        db = Room.databaseBuilder(getContext(), HealthDatabase.class, "health-database")
+                .allowMainThreadQueries() // Pour la démo seulement
+                .build();
 
+        // Initialiser les vues
         editTextPoids = view.findViewById(R.id.editTextPoids);
         editTextTaille = view.findViewById(R.id.editTextTaille);
-        buttonSaveIMC = view.findViewById(R.id.buttonSaveIMC);
-        lineChartIMC = view.findViewById(R.id.lineChartIMC);
-
-        db = Room.databaseBuilder(getContext(), HealthDatabase.class, "health-db").build();
-
-        buttonSaveIMC.setOnClickListener(v -> {
-            String poids = editTextPoids.getText().toString();
-            String taille = editTextTaille.getText().toString();
-            
-            if (poids.isEmpty() || taille.isEmpty()) {
-                Toast.makeText(getContext(), "Veuillez remplir tous les champs", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            
-            float poidsFloat = Float.parseFloat(poids);
-            float tailleFloat = Float.parseFloat(taille) / 100; // cm to m
-            float imc = poidsFloat / (tailleFloat * tailleFloat);
-            
-            new Thread(() -> {
-                MasseCorporelleEntity masseCorporelle = new MasseCorporelleEntity();
-                masseCorporelle.setValue(String.format("%.1f", imc));
-                db.masseCorporelleDao().insert(masseCorporelle);
-                
-                getActivity().runOnUiThread(() -> {
-                    Toast.makeText(getContext(), "IMC calculé: " + String.format("%.1f", imc), Toast.LENGTH_SHORT).show();
-                    editTextPoids.setText("");
-                    editTextTaille.setText("");
-                    loadChartData();
-                });
-            }).start();
-        });
-
-        loadChartData();
+        buttonSave = view.findViewById(R.id.buttonSaveIMC);
+        chartIMC = view.findViewById(R.id.chartIMC);
+        
+        // Configurer le clic sur le bouton
+        buttonSave.setOnClickListener(v -> saveIMC());
+        
+        // Charger les données
+        loadIMCData();
+        
         return view;
     }
 
-    private void loadChartData() {
-        new Thread(() -> {
-            List<MasseCorporelleEntity> imcList = db.masseCorporelleDao().getAll();
-            List<Entry> entries = new ArrayList<>();
+    private void saveIMC() {
+        String poidsStr = editTextPoids.getText().toString();
+        String tailleStr = editTextTaille.getText().toString();
+        
+        if (!poidsStr.isEmpty() && !tailleStr.isEmpty()) {
+            float poids = Float.parseFloat(poidsStr);
+            float taille = Float.parseFloat(tailleStr) / 100; // cm en m
             
-            for (int i = 0; i < imcList.size(); i++) {
-                entries.add(new Entry(i, Float.parseFloat(imcList.get(i).getValue())));
-            }
+            float imc = poids / (taille * taille);
+            
+            // Créer et enregistrer dans la base de données
+            MasseCorporelleEntity masseCorporelle = new MasseCorporelleEntity();
+            masseCorporelle.setValue(String.format("%.2f", imc));
+            masseCorporelle.setPoids(poids);
+            masseCorporelle.setTaille(taille * 100); // m en cm
+            masseCorporelle.setTimestamp(new Date().getTime());
+            
+            db.masseCorporelleDao().insert(masseCorporelle);
+            
+            // Rafraîchir le graphique
+            loadIMCData();
+            
+            // Réinitialiser les champs
+            editTextPoids.setText("");
+            editTextTaille.setText("");
+            
+            Toast.makeText(getContext(), "IMC calculé et enregistré: " + String.format("%.2f", imc), Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(getContext(), "Veuillez entrer le poids et la taille", Toast.LENGTH_SHORT).show();
+        }
+    }
 
-            getActivity().runOnUiThread(() -> {
-                if (entries.isEmpty()) {
-                    lineChartIMC.clear();
-                    lineChartIMC.invalidate();
-                    return;
-                }
-
-                LineDataSet dataSet = new LineDataSet(entries, "IMC");
-                dataSet.setColor(Color.GREEN);
-                dataSet.setValueTextColor(Color.BLACK);
-                dataSet.setCircleColor(Color.GREEN);
-                dataSet.setCircleRadius(4f);
-
-                LineData lineData = new LineData(dataSet);
-                lineChartIMC.setData(lineData);
-                lineChartIMC.getDescription().setEnabled(false);
-                lineChartIMC.invalidate();
-            });
-        }).start();
+    private void loadIMCData() {
+        List<MasseCorporelleEntity> imcList = db.masseCorporelleDao().getAll();
+        
+        ArrayList<Entry> entries = new ArrayList<>();
+        
+        for (int i = 0; i < imcList.size(); i++) {
+            MasseCorporelleEntity imc = imcList.get(i);
+            entries.add(new Entry(i, Float.parseFloat(imc.getValue())));
+        }
+        
+        if (entries.isEmpty()) {
+            // Si pas de données, masquer le graphique
+            chartIMC.setVisibility(View.GONE);
+            return;
+        }
+        
+        chartIMC.setVisibility(View.VISIBLE);
+        
+        LineDataSet dataSet = new LineDataSet(entries, "IMC");
+        dataSet.setColor(Color.GREEN);
+        dataSet.setValueTextColor(Color.BLACK);
+        
+        LineData lineData = new LineData(dataSet);
+        chartIMC.setData(lineData);
+        chartIMC.invalidate(); // Rafraîchir
     }
 }

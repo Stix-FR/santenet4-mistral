@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
+import androidx.room.Room;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -20,78 +21,123 @@ import java.util.Locale;
 
 public class Utils {
 
-    public static void sendNotification(Context context, String title, String message) {
-        // Créer le canal de notification pour Android 8.0 et supérieur
+    public static void exportDataToCSV(Context context) {
+        try {
+            // Obtenir le dossier de stockage interne
+            File directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
+            if (directory == null) {
+                directory = context.getFilesDir();
+            }
+            
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+            
+            // Créer le fichier avec date et heure
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
+            String fileName = "health_data_" + dateFormat.format(new Date()) + ".csv";
+            File file = new File(directory, fileName);
+            
+            FileWriter writer = new FileWriter(file);
+            
+            // Accès à la base de données
+            HealthDatabase db = Room.databaseBuilder(context, HealthDatabase.class, "health-database")
+                    .allowMainThreadQueries()
+                    .build();
+            
+            // Écriture des en-têtes
+            writer.append("Type,Valeur,Date\n");
+            
+            // Exportation des données de tension
+            List<TensionEntity> tensions = db.tensionDao().getAll();
+            for (TensionEntity tension : tensions) {
+                writer.append("Tension,")
+                      .append(tension.getValue())
+                      .append(",")
+                      .append(formatDate(tension.getTimestamp()))
+                      .append("\n");
+            }
+            
+            // Exportation des données de diabète
+            List<DiabeteEntity> diabeteList = db.diabeteDao().getAll();
+            for (DiabeteEntity diabete : diabeteList) {
+                writer.append("Diabète,")
+                      .append(diabete.getValue())
+                      .append(",")
+                      .append(formatDate(diabete.getTimestamp()))
+                      .append("\n");
+            }
+            
+            // Exportation des données de masse corporelle
+            List<MasseCorporelleEntity> imcList = db.masseCorporelleDao().getAll();
+            for (MasseCorporelleEntity imc : imcList) {
+                writer.append("IMC,")
+                      .append(imc.getValue())
+                      .append(",")
+                      .append(formatDate(imc.getTimestamp()))
+                      .append("\n");
+            }
+            
+            // Exportation des données de souffle
+            List<SouffleEntity> souffleList = db.souffleDao().getAll();
+            for (SouffleEntity souffle : souffleList) {
+                writer.append("Souffle,")
+                      .append(souffle.getValue())
+                      .append(",")
+                      .append(formatDate(souffle.getTimestamp()))
+                      .append("\n");
+            }
+            
+            writer.flush();
+            writer.close();
+            
+            // Afficher une notification
+            showNotification(context, "Exportation réussie", "Données exportées vers " + file.getAbsolutePath());
+            
+            Toast.makeText(context, "Données exportées avec succès vers: " + file.getAbsolutePath(), Toast.LENGTH_LONG).show();
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(context, "Erreur lors de l'exportation: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    private static String formatDate(long timestamp) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
+        return dateFormat.format(new Date(timestamp));
+    }
+    
+    private static void showNotification(Context context, String title, String message) {
+        String channelId = "health_tracker_channel";
+        
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        
+        // Pour Android 8.0 et supérieur, nous devons créer un canal de notification
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
-                    "health_tracker_channel",
-                    "Canal Health Tracker",
-                    NotificationManager.IMPORTANCE_DEFAULT);
-            NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+                    channelId,
+                    "Notifications Health Tracker",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
             notificationManager.createNotificationChannel(channel);
         }
-
+        
         Intent intent = new Intent(context, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, 
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "health_tracker_channel")
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                context, 
+                0, 
+                intent, 
+                PendingIntent.FLAG_IMMUTABLE
+        );
+        
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle(title)
                 .setContentText(message)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);
-
-        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(0, builder.build());
-    }
-
-    public static void exportDataToCSV(Context context, List<?> dataList, String fileName) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault());
-        String formattedDate = sdf.format(new Date());
-        String actualFileName = fileName.replace(".csv", "_" + formattedDate + ".csv");
         
-        try {
-            File exportDir = new File(context.getExternalFilesDir(null), "HealthTracker");
-            if (!exportDir.exists()) {
-                exportDir.mkdirs();
-            }
-
-            File file = new File(exportDir, actualFileName);
-            FileWriter fw = new FileWriter(file);
-            
-            // En-tête CSV
-            if (dataList.size() > 0 && dataList.get(0) instanceof TensionEntity) {
-                fw.append("Id,Valeur,Date\n");
-                
-                for (Object obj : dataList) {
-                    TensionEntity tension = (TensionEntity) obj;
-                    String date = sdf.format(new Date(tension.getTimestamp()));
-                    fw.append(String.valueOf(tension.getId())).append(",")
-                      .append(tension.getValue()).append(",")
-                      .append(date).append("\n");
-                }
-            }
-            // Ajouter ici d'autres conditions pour les autres types d'entités
-            
-            fw.flush();
-            fw.close();
-            
-            notifyExportSuccess(context, file.getAbsolutePath());
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(context, "Erreur lors de l'exportation: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
-    }
-    
-    private static void notifyExportSuccess(Context context, String filePath) {
-        Toast.makeText(context, "Données exportées avec succès dans: " + filePath, Toast.LENGTH_LONG).show();
-    }
-    
-    public static boolean isExternalStorageWritable() {
-        String state = Environment.getExternalStorageState();
-        return Environment.MEDIA_MOUNTED.equals(state);
+        notificationManager.notify(1, builder.build());
     }
 }

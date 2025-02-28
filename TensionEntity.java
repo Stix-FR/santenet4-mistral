@@ -26,11 +26,11 @@ public class TensionEntity {
     public void setValue(String value) {
         this.value = value;
     }
-    
+
     public long getTimestamp() {
         return timestamp;
     }
-    
+
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }

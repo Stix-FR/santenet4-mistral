@@ -1,37 +1,37 @@
 
 package com.example.healthtracker;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentPagerAdapter;
-import java.util.ArrayList;
-import java.util.List;
+import androidx.fragment.app.FragmentActivity;
+import androidx.viewpager2.adapter.FragmentStateAdapter;
 
-public class ViewPagerAdapter extends FragmentPagerAdapter {
-    private final List<Fragment> fragmentList = new ArrayList<>();
-    private final List<String> fragmentTitleList = new ArrayList<>();
+public class ViewPagerAdapter extends FragmentStateAdapter {
+    private static final int NUM_PAGES = 4;
 
-    public ViewPagerAdapter(FragmentManager manager) {
-        super(manager, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
+    public ViewPagerAdapter(@NonNull FragmentActivity fragmentActivity) {
+        super(fragmentActivity);
+    }
+
+    @NonNull
+    @Override
+    public Fragment createFragment(int position) {
+        switch (position) {
+            case 0:
+                return new TensionFragment();
+            case 1:
+                return new DiabeteFragment();
+            case 2:
+                return new MasseCorporelleFragment();
+            case 3:
+                return new SouffleFragment();
+            default:
+                return new TensionFragment();
+        }
     }
 
     @Override
-    public Fragment getItem(int position) {
-        return fragmentList.get(position);
-    }
-
-    @Override
-    public int getCount() {
-        return fragmentList.size();
-    }
-
-    public void addFragment(Fragment fragment, String title) {
-        fragmentList.add(fragment);
-        fragmentTitleList.add(title);
-    }
-
-    @Override
-    public CharSequence getPageTitle(int position) {
-        return fragmentTitleList.get(position);
+    public int getItemCount() {
+        return NUM_PAGES;
     }
 }
