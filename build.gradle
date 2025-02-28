@@ -30,6 +30,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.drawerlayout:drawerlayout:1.1.1'
+    implementation 'androidx.core:core:1.10.1'
     
     // Room pour la base de données locale
     implementation 'androidx.room:room-runtime:2.5.2'

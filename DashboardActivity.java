@@ -22,6 +22,7 @@ public class DashboardActivity extends AppCompatActivity implements NavigationVi
     private DrawerLayout drawerLayout;
     private ViewPager2 viewPager;
     private TabLayout tabLayout;
+    private ViewPagerAdapter viewPagerAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,67 +33,72 @@ public class DashboardActivity extends AppCompatActivity implements NavigationVi
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        // Configuration du drawer
+        // Configuration du menu latéral
         drawerLayout = findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, 
-                R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawerLayout.addDrawerListener(toggle);
-        toggle.syncState();
-
-        // Configuration navigation view
         NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        // Afficher le nom d'utilisateur
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                this, drawerLayout, toolbar, 
+                R.string.navigation_drawer_open, 
+                R.string.navigation_drawer_close);
+        drawerLayout.addDrawerListener(toggle);
+        toggle.syncState();
+
+        // Configuration du ViewPager et TabLayout
+        viewPager = findViewById(R.id.viewPager);
+        tabLayout = findViewById(R.id.tabLayout);
+        
+        viewPagerAdapter = new ViewPagerAdapter(this);
+        viewPager.setAdapter(viewPagerAdapter);
+        
+        // Configuration des onglets
+        new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
+            switch (position) {
+                case 0:
+                    tab.setText("Tension");
+                    break;
+                case 1:
+                    tab.setText("Diabète");
+                    break;
+                case 2:
+                    tab.setText("IMC");
+                    break;
+                case 3:
+                    tab.setText("Souffle");
+                    break;
+            }
+        }).attach();
+
+        // Afficher le nom d'utilisateur dans l'en-tête du menu
         View headerView = navigationView.getHeaderView(0);
         TextView textViewUsername = headerView.findViewById(R.id.textViewUsername);
-        
         SharedPreferences sharedPreferences = getSharedPreferences("HealthTrackerPrefs", MODE_PRIVATE);
         String username = sharedPreferences.getString("username", "Utilisateur");
         textViewUsername.setText(username);
-
-        // Configuration du ViewPager
-        viewPager = findViewById(R.id.viewPager);
-        viewPager.setAdapter(new ViewPagerAdapter(this));
-
-        // Configuration TabLayout
-        tabLayout = findViewById(R.id.tabLayout);
-        new TabLayoutMediator(tabLayout, viewPager,
-                (tab, position) -> {
-                    switch (position) {
-                        case 0:
-                            tab.setText("Tension");
-                            break;
-                        case 1:
-                            tab.setText("Diabète");
-                            break;
-                        case 2:
-                            tab.setText("IMC");
-                            break;
-                        case 3:
-                            tab.setText("Souffle");
-                            break;
-                    }
-                }).attach();
     }
 
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-
+        
         if (id == R.id.nav_export) {
-            // Exporter les données de santé
             exportHealthData();
-        } else if (id == R.id.nav_settings) {
-            // Ouvrir les paramètres
-            // TODO: Implémenter
         } else if (id == R.id.nav_logout) {
-            // Déconnexion
             logout();
         }
-
+        
         drawerLayout.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+        } else {
+            super.onBackPressed();
+        }
     }
 
     private void exportHealthData() {

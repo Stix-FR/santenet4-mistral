@@ -1,4 +1,3 @@
-
 package com.example.healthtracker;
 
 import androidx.room.Entity;

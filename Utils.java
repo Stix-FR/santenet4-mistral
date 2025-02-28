@@ -20,6 +20,47 @@ import java.util.List;
 import java.util.Locale;
 
 public class Utils {
+    public static String formatDate(long timestamp) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
+        return dateFormat.format(new Date(timestamp));
+    }
+
+    public static void sendNotification(Context context, String title, String message) {
+        String channelId = "health_tracker_channel";
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        
+        // Créer le canal de notification pour Android 8.0+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    channelId,
+                    "Rappels HealthTracker",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
+            channel.setDescription("Notifications pour les rappels quotidiens");
+            notificationManager.createNotificationChannel(channel);
+        }
+        
+        // Intent pour ouvrir l'app quand la notification est cliquée
+        Intent intent = new Intent(context, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                context, 
+                0, 
+                intent, 
+                PendingIntent.FLAG_IMMUTABLE
+        );
+        
+        // Construire la notification
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true);
+        
+        // Afficher la notification
+        notificationManager.notify(1, builder.build());
+    }
 
     public static void exportDataToCSV(Context context) {
         try {
@@ -59,8 +100,8 @@ public class Utils {
             }
             
             // Exportation des données de diabète
-            List<DiabeteEntity> diabeteList = db.diabeteDao().getAll();
-            for (DiabeteEntity diabete : diabeteList) {
+            List<DiabeteEntity> diabeteValues = db.diabeteDao().getAll();
+            for (DiabeteEntity diabete : diabeteValues) {
                 writer.append("Diabète,")
                       .append(diabete.getValue())
                       .append(",")
@@ -69,18 +110,18 @@ public class Utils {
             }
             
             // Exportation des données de masse corporelle
-            List<MasseCorporelleEntity> imcList = db.masseCorporelleDao().getAll();
-            for (MasseCorporelleEntity imc : imcList) {
+            List<MasseCorporelleEntity> masseValues = db.masseCorporelleDao().getAll();
+            for (MasseCorporelleEntity masse : masseValues) {
                 writer.append("IMC,")
-                      .append(imc.getValue())
+                      .append(masse.getValue())
                       .append(",")
-                      .append(formatDate(imc.getTimestamp()))
+                      .append(formatDate(masse.getTimestamp()))
                       .append("\n");
             }
             
             // Exportation des données de souffle
-            List<SouffleEntity> souffleList = db.souffleDao().getAll();
-            for (SouffleEntity souffle : souffleList) {
+            List<SouffleEntity> souffleValues = db.souffleDao().getAll();
+            for (SouffleEntity souffle : souffleValues) {
                 writer.append("Souffle,")
                       .append(souffle.getValue())
                       .append(",")
@@ -88,56 +129,15 @@ public class Utils {
                       .append("\n");
             }
             
+            // Fermer le fichier
             writer.flush();
             writer.close();
             
-            // Afficher une notification
-            showNotification(context, "Exportation réussie", "Données exportées vers " + file.getAbsolutePath());
-            
-            Toast.makeText(context, "Données exportées avec succès vers: " + file.getAbsolutePath(), Toast.LENGTH_LONG).show();
+            Toast.makeText(context, "Données exportées avec succès: " + file.getAbsolutePath(), Toast.LENGTH_LONG).show();
             
         } catch (IOException e) {
             e.printStackTrace();
             Toast.makeText(context, "Erreur lors de l'exportation: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
-    }
-    
-    private static String formatDate(long timestamp) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
-        return dateFormat.format(new Date(timestamp));
-    }
-    
-    private static void showNotification(Context context, String title, String message) {
-        String channelId = "health_tracker_channel";
-        
-        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        
-        // Pour Android 8.0 et supérieur, nous devons créer un canal de notification
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    channelId,
-                    "Notifications Health Tracker",
-                    NotificationManager.IMPORTANCE_DEFAULT
-            );
-            notificationManager.createNotificationChannel(channel);
-        }
-        
-        Intent intent = new Intent(context, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-                context, 
-                0, 
-                intent, 
-                PendingIntent.FLAG_IMMUTABLE
-        );
-        
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle(title)
-                .setContentText(message)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(true);
-        
-        notificationManager.notify(1, builder.build());
     }
 }
