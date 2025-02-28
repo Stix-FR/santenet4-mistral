@@ -1,7 +1,6 @@
 
 plugins {
     id 'com.android.application'
-    id 'com.google.gms.google-services'
 }
 
 android {
@@ -29,14 +28,11 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.fragment:fragment:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
+    
+    // Room pour la base de données locale
     implementation 'androidx.room:room-runtime:2.5.2'
     annotationProcessor 'androidx.room:room-compiler:2.5.2'
     
     // MPAndroidChart pour les graphiques
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
-    
-    // Firebase
-    implementation platform('com.google.firebase:firebase-bom:32.2.2')
-    implementation 'com.google.firebase:firebase-auth'
-    implementation 'com.google.firebase:firebase-firestore'
 }
